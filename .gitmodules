@@ -1,0 +1,3 @@
+[submodule "src/linux-sctp"]
+	path = src/linux-sctp
+	url = git://github.com/fabianbergmark/linux-sctp.git
