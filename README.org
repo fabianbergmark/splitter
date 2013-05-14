@@ -1,0 +1,240 @@
+* Splitter Documentation
+** Introduction
+   Splitter is intended to be a network tool for creating transparent
+   high performance, highly stable connections over WAN and LAN
+   connections, with built-in support for advanced networking features
+   such as SCTP multi-homing and device bonding.
+*** Planned use
+    Splitter is developed to be the work-horse in a pocket-router based
+    on Raspberry PI. The router will act as a bridge between one client
+    and several connected devices with WAN access.
+*** Modes of operation
+    Achieving high speed and stability can be done both on the protocol
+    layer or the physical layer. Both modes are interesting as they
+    offer different capabilities and faces different problems.
+**** Protocol layer
+     Using a client-server model, it's possible to create a single SCTP
+     association, utilizing the advanced multi-homing and fault-tolerance
+     built into the protocol. This connection can be used to tunnel TCP
+     (useful for SOCKS-data), IP (TUN) or Ethernet (TAP) frames.
+     The later of the two would be easily implemented by patching OpenVPN
+     with SCTP support
+**** Physical layer
+     The Linux bonding driver offers advanced modes of operation that
+     provides load-balancing and fault tolerance. Depending on the
+     layer the load-balancing works on, hardware support in routing
+     hardware might be required.
+*** Test Suite
+    As with all development of network protocols, its necessary to
+    evaluate variables in a reproducible and controllable environment
+    that can be used to model several real-world variables such as
+    package-loss, delays and bandwidth-throttling. The git repository
+    includes a test branch with a test-suit for testing the splitter
+    tool under various network layouts and conditions.
+*** Obstacles
+**** Application layer
+     SCTP was developed to facilitate special needs in the telecom
+     industry that wasn't satisfied by the available network protocols.
+     It has unfortunately made slow progress outside this domain.
+     This can be explained by the fact that it is somewhat more
+     difficult to build applications using SCTP, and legacy NATs.
+     SCTP is a general multi-purpose protocol. As such it has to impose
+     several limitations on the protocol features. It might be interesting
+     to remove some of these limitations when developing a single-purpose
+     tool.
+***** Protocol support
+      As a not-widely used protocol, SCTP suffers from lacking support in
+      networking hardware. Gateways usually only support TCP and UDP port
+      forwarding, making it impossible to run more than one public SCTP
+      application on a network. Additionally, the widespread use of TCP
+      has led to protocol-specific code has been added to NAT-implementations
+      for TCP. This allows several internal addresses to use the same public
+      address and still use the same port for their connections. This is
+      referred to as Network Address and Port Translation (NAPT).
+      An initial research showed that the lack of SCTP support in NATs
+      is a serious impediment when used with mobile tethering.
+***** Load balancing
+      The current specification of the SCTP protocol only allows using
+      the mulihoming functionality for fault-tolerance purposes. This
+      main reason is said to be lacking theory for multi-homed connections.
+      However, in the simpler server-client model there might be possible
+      to successfully implement load-balancing features.
+*** Modules and Libraries
+    Recent versions of the Linux kernel includes an SCTP protocol stack.
+    Several user-space libraries interfaces with this stack. Libsctp provided
+    by the lksctp suit implements and extends the sockets API to work
+    with SCTP and should thus feel familiar with other network programming.
+    Sctplib is used as a reference implementation mainly for the
+    UDP-encapsulation feature.
+** Used terms and technologies
+*** SCTP
+    SCTP, or Stream Control Transmission Protocol is sometimes referred to as
+    the third transport layer protocol after TCP and UDP. It was developed
+    for the telecom industry to be a high performance and fault-tolerant
+    protocol. SCTP combines the features of TCP and UDP and adds several
+    new.
+    * Message based - SCTP sends data in groups called messages. As with UDP,
+      messages are sent and received in one operation.
+    * Multi-streaing - SCTP offers the capability to transmit several
+      independent stream in parallel, avoiding Head-of-line blocking.
+    * Multi-homing - SCTP extends the notion of a connection between TCP
+      peers to allow for multiple endpoints on both sides, called an
+      association. This allows for transparent fail-over between redundant
+      paths.
+
+      #+BEGIN_EXAMPLE
+      ---------------                              ---------------
+      | SCTP User   |                              | SCTP User   |
+      | Application |                              | Application |
+      |             |                              |             |
+      |-------------+                              +-------------|
+      | SCTP        |                              | SCTP        |
+      | Transport   |                              | Transport   |
+      | Layer       |                              | Layer       |
+      |-------------+                              +-------------|
+      | IP          | One or more  \/  One or more | IP          |
+      | Transport   | IP endpoint  /\  IP endpoint | Transport   |
+      | Layer       | interfaces       interfaces  | Layer       |
+      ---------------                              ---------------
+      #+END_EXAMPLE
+
+**** Header
+     The SCTP header resembles the TCP header.
+
+     #+BEGIN_EXAMPLE
+     <--------------- 32 bit ------------- >
+     |-------------------------------------|-------------
+     | Source Port      | Destination Port | SCTP
+     |-------------------------------------| Common
+     |          Verification Tag           | Header
+     |-------------------------------------|
+     |               Checksum              |
+     |-------------------------------------|-------------
+     |  Type   | Flags  |      Length      | Chunk 1
+     |-------------------------------------|
+     |              User Data              |
+     |-------------------------------------|-------------
+                        .
+                        .
+                        .
+     |-------------------------------------|-------------
+     |  Type   | Flags  |      Length      | Chunk N
+     |-------------------------------------|
+     |              User Data              |
+     |-------------------------------------|-------------
+     #+END_EXAMPLE
+
+**** Sockets API conformance
+     Lksctp implements extensions to the sockets API to work with SCTP
+     associations. Some abnormalities exists comparing with TCP and UDP
+     sockets. Be sure to not confuse one-to-many style sockets with the
+     multi-homing functionality in SCTP. One-to-many style sockets can
+     be associated with many associations, each of which supports
+     multi-homing.
+***** One-to-many style interface
+      * socket() - Sockets are created with IPPROTO_SCTP as the protocol.
+        One-to-many style sockets uses SOCK_SEQPACKET as type.
+      * accept() - One-to-many style socket don't call accept to retrieve
+        new associations. Instead new associations are accepted automatically
+        and a notification is delivered via recvmsg().
+      * sendmsg() - In one-to-many connections, the msg_name field in the
+        msghdr structure will be set to one of the transport addresses
+        of the intended reciever.
+      * recvmsg() - In one-to-many connections, the msg_name field in the
+        msghdr structure will be set to the source transport address for the
+        received data.
+      * connect() - Multiple calls to connect() on the same socket can be
+        used to create multiple associations. SCTP allows for data exchange
+        during the association set up phase. To use this feature, application
+        cant use connect(), and should instead use sendmsg() with SCTP_INIT
+        type ancillary data.
+      * select() - Caution needs to be exercised when using select() on write
+        or on read with a one-to-many socket. A positive return on write only
+        indicates that one of the associations is writable. A write operation
+        on the socket could therefore still block. Likewise, a positive return
+        on read only indicates that one of the associations has data to read.
+        sctp_peelof() can be used to separate associations from a one-to-many
+        socket.
+***** One-to-one style interface
+      * sendmsg() - The msg_name field in the msghdr structure is used to
+        indicate the preferred peer address. This can be used to discurage
+        the stack from sending on the primary interface.
+**** Special considerations
+     As SCTP allows a socket to have many associations associated with it,
+     application programmers should consider using non-blocking style for
+     one-to-many sockets. Otherwise, one stalled association may block
+     the entire socket.
+*** UDP encapsulation
+    To solve the problem with legacy NAT support, one possible solution is
+    to encapsulate packages in an UDP/IP packet. As encapsulation requires
+    "decapsulation", both peers must support the same encapsulation method.
+** Implementation
+   The splitter tool consists of four related but separate projects.
+   * A extensive test framework has to be created to ensure correct protocol
+     behavior (except when purposely diverging from the specification) and
+     to measure impact on performance and fault-tolerance.
+   * The SCTP protocol must be extended to solve problems with NAT traversal.
+     Experimental load-balancing is also a topic of investigation.
+   * A server-client application has to be developed that allows traffic
+     to be tunneled transparently over an SCTP-connection. This could also
+     serve as a reference implementation of advanced SCTP features.
+   * Device bonding automation and configuration has to be implemented
+     and evaluated.
+*** Test suite
+    Lksctp provides a test suite that serves as a basis for protocol
+    functionality testing. To test aspects as NAT traversal and protocol
+    performance, a testing environment has to be created. This environment
+    has to offer a controllable and reproducible tests for various network
+    layouts.
+**** Performance evaluation
+     As the project aims to make changes to the transportation layer of SCTP
+     as well as implementing application layer transportation, some measurement
+     tool has to be used to analyze performance and stability. Iperf is a tool
+     that performs network throughput tests for both TCP and UDP. It should
+     be possible to extend iperf with SCTP protocol support.
+**** Network emulation
+     Linux has native support for virtual, in-kernel network interfaces. This
+     allows for creation of various network layouts. Netem provides network
+     emulation of WAN functionality for testing protocols. It allows to emulate
+     variables as delay, loss, duplication and re-ordering of packages.
+**** Tests
+***** WAN bonding
+     This network layout consists of one subnet (10.0.0.0/24). One device
+     (10.0.0.1) represents the a WAN node running the iperf server.
+     Multiple devices are then added to the subnet representing WAN devices.
+*** Protocol extensions
+**** UDP encapsulation
+     To solve the problem with NAT traversal one possible solution is to
+     wrap SCTP packages in an UDP.
+
+     #+BEGIN_EXAMPLE
+     |-------------------------------------|
+     |              IP Header              |
+     |-------------------------------------|
+     |             UDP Header              |
+     |-------------------------------------|
+     |         SCTP Common Header          |
+     |-------------------------------------|
+     |            SCTP Chunk 1             |
+     |-------------------------------------|
+                        .
+                        .
+                        .
+     |-------------------------------------|
+     |            SCTP Chunk N             |
+     |-------------------------------------|
+     #+END_EXAMPLE
+
+*** Server-client tunneling
+    As most content is served over either TCP or UDP, the use of SCTP
+    must be integrated so that it's transparent to both sender and reciever.
+    The server-client gives the ability to create application-layer tunnels
+    over an SCTP connection.
+    A client would bind to a port on the selected protocol and wait for
+    connections. Incoming data would be sent over the SCTP connection to
+    the server at either stream-level or connection-level. The server would
+    then forward the data over the same protocol to some destination.
+    Thus, traffic between the client and the server utilize advanced
+    SCTP functions while being transparent to the sender and
+    reciever except source and destination information in the IP and
+    application layer headers.
