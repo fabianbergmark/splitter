@@ -3,27 +3,22 @@
    Splitter is intended to be a network tool for creating transparent
    high performance, highly stable connections over WAN and LAN
    connections, with built-in support for advanced networking features
-   such as SCTP multi-homing and device bonding.
+   such as SCTP multi-homing.
 *** Planned use
     Splitter is developed to be the work-horse in a pocket-router based
     on Raspberry PI. The router will act as a bridge between one client
     and several connected devices with WAN access.
 *** Modes of operation
-    Achieving high speed and stability can be done both on the protocol
-    layer or the physical layer. Both modes are interesting as they
-    offer different capabilities and faces different problems.
+    Achieving high speed and stability can be done both in several ways
+    the protocol. Its iteresting to explore different solutions as
+    they offer different capabilities and faces different problems.
 **** Protocol layer
      Using a client-server model, it's possible to create a single SCTP
      association, utilizing the advanced multi-homing and fault-tolerance
      built into the protocol. This connection can be used to tunnel TCP
      (useful for SOCKS-data), IP (TUN) or Ethernet (TAP) frames.
      The later of the two would be easily implemented by patching OpenVPN
-     with SCTP support
-**** Physical layer
-     The Linux bonding driver offers advanced modes of operation that
-     provides load-balancing and fault tolerance. Depending on the
-     layer the load-balancing works on, hardware support in routing
-     hardware might be required.
+     with SCTP support.
 *** Test Suite
     As with all development of network protocols, its necessary to
     evaluate variables in a reproducible and controllable environment
@@ -178,8 +173,6 @@
    * A server-client application has to be developed that allows traffic
      to be tunneled transparently over an SCTP-connection. This could also
      serve as a reference implementation of advanced SCTP features.
-   * Device bonding automation and configuration has to be implemented
-     and evaluated.
 *** Test suite
     Lksctp provides a test suite that serves as a basis for protocol
     functionality testing. To test aspects as NAT traversal and protocol
@@ -198,10 +191,6 @@
      emulation of WAN functionality for testing protocols. It allows to emulate
      variables as delay, loss, duplication and re-ordering of packages.
 **** Tests
-***** WAN bonding
-     This network layout consists of one subnet (10.0.0.0/24). One device
-     (10.0.0.1) represents the a WAN node running the iperf server.
-     Multiple devices are then added to the subnet representing WAN devices.
 *** Protocol extensions
 **** UDP encapsulation
      To solve the problem with NAT traversal one possible solution is to
