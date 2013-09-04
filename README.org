@@ -19,6 +19,11 @@
      (useful for SOCKS-data), IP (TUN) or Ethernet (TAP) frames.
      The later of the two would be easily implemented by patching OpenVPN
      with SCTP support.
+**** Split routing
+     It is possible to achieve load balancing by routing traffic trough
+     all available interfaces. In short it is achieved by creating
+     multiple routing tables, each using a different default interface,
+     and distribute routing lookups between these tables.
 *** Test Suite
     As with all development of network protocols, its necessary to
     evaluate variables in a reproducible and controllable environment
@@ -54,6 +59,11 @@
       main reason is said to be lacking theory for multi-homed connections.
       However, in the simpler server-client model there might be possible
       to successfully implement load-balancing features.
+**** Physical layer
+     The inability to control the network options for the thetered network
+     hosted by the phone enforces some limitations on how load-balancing
+     can be achieved. For example, the network hosted by an iPhone always
+     has the subnet 172.20.10.0/28.
 *** Modules and Libraries
     Recent versions of the Linux kernel includes an SCTP protocol stack.
     Several user-space libraries interfaces with this stack. Libsctp provided
@@ -173,6 +183,51 @@
    * A server-client application has to be developed that allows traffic
      to be tunneled transparently over an SCTP-connection. This could also
      serve as a reference implementation of advanced SCTP features.
+*** Physical layer
+    Split access routing can be achieved in several ways in Linux. The
+    simplest solution would be to utilize the nexthop option in 'ip route'
+    command in the iproute2 package creating a multipath route.
+
+    #+BEGIN_EXAMPLE
+    ip route add default scope global nexthop via $P1 dev $IF1 weight 1 \
+                                      nexthop via $P2 dev $IF2 weight 1 \
+                                                       .
+                                                       .
+                                                       .
+                                      nexthop via $Pn dev $IFn weight 1
+    #+END_EXAMPLE
+
+    However, this can't handle the situation with duplicate subnets. A more
+    explicit solution is to use iptables fwmark option together with the
+    statistical module to, with a certain probability, mark outgoing
+    connections with a number n where n is a routing table number of an
+    interface, and then create a rule that every packet marked with n should
+    use routing table n. One has only to ensure that sum(prob(n)) = 1 and that
+    the probability that a package will marked with a certain n follows a random
+    distritbution.
+
+    #+BEGIN_EXAMPLE
+    iptables -t mangle -A PREROUTING -j CONNMARK --restore-mark
+    iptables -t mangle -A PREROUTING -m mark ! --mark 0 -j ACCEPT
+
+    iptables -t mangle -A PREROUTING -j MARK --set-mark $TN_1
+    iptables -t mangle -A PREROUTING -m statistic --mode random --probability 1/2 --set-mark $TN_2
+                                                .
+                                                .
+                                                .
+    iptables -t mangle -A PREROUTING -m statistic --mode random --probability 1/n --set-mark $TN_n
+
+    iptables -t mangle -A PREROUTING -j CONNMARK --save-mark
+    #+END_EXAMPLE
+
+    #+BEGIN_EXAMPLE
+    ip rule add fwmark $TN_1 table $TN_1
+                     .
+                     .
+                     .
+    ip rule add fwmark $TN_n table $TN_n
+    #+END_EXAMPLE
+
 *** Test suite
     Lksctp provides a test suite that serves as a basis for protocol
     functionality testing. To test aspects as NAT traversal and protocol
