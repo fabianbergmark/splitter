@@ -205,7 +205,7 @@
 *** Protocol extensions
 **** UDP encapsulation
      To solve the problem with NAT traversal one possible solution is to
-     wrap SCTP packages in an UDP.
+     wrap SCTP packages in UDP headers.
 
      #+BEGIN_EXAMPLE
      |-------------------------------------|
@@ -224,6 +224,35 @@
      |            SCTP Chunk N             |
      |-------------------------------------|
      #+END_EXAMPLE
+
+     The whole SCTP packet resides in the data-portion of the UDP packet.
+     This would require creation of UDP sockets and hooking into the
+     state transitions of the SCTP socket, preferably without
+     having to change the protocol logic. To simplify the creation of
+     encapsulation sockets, UDP as a connectionless protocol is ideal.
+     One UDP socket is created for each SCTP endpoint and copies the state
+     transitions of the SCTP socket, ie. binding and connecting. The UDP
+     socket is bound to the same port as the SCTP socket to simplify port
+     configuration.
+     The steps for sending data are:
+     * Right before dumping the packet on IP, create an UDP header with the
+       same destination port and address as the SCTP header and push it onto
+       the packet SKB.
+     * Change the owner of the SKB to the encapsulating UDP socket.
+     The steps for receiving data are:
+     * In the receiving hook for the UDP socket, pull the UDP header from
+       the packet SKB.
+     * Pass the packet to the original receiving function for SCTP packages.
+     To hold the information about the encapsulating socket and the
+     associated SCTP endpoint, a new structure was introduced. A pointer to
+     this structure is stored in both the endpoint and the UDP socket.
+***** Improvements
+      In a future implementation, the original SCTP socket wouldn't be needed,
+      and the encapsulation could be integrated more closely into the protocol.
+      The current implementation however, gives a clear view of the
+      functionality needed for encapsulation. Other encapsulation methods than
+      UDP might also be of interest, and the current implementation makes it
+      easy to add a new encapsulation mode.
 
 *** Server-client tunneling
     As most content is served over either TCP or UDP, the use of SCTP
