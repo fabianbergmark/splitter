@@ -176,8 +176,7 @@
    * The SCTP protocol must be extended to solve problems with NAT traversal.
      Experimental load-balancing is also a topic of investigation.
    * A server-client application has to be developed that allows traffic
-     to be tunneled transparently over an SCTP-connection. This could also
-     serve as a reference implementation of advanced SCTP features.
+     to be tunneled transparently over an SCTP-connection.
    * Device bonding automation and configuration has to be implemented
      and evaluated.
 *** Test suite
@@ -228,13 +227,22 @@
 *** Server-client tunneling
     As most content is served over either TCP or UDP, the use of SCTP
     must be integrated so that it's transparent to both sender and reciever.
-    The server-client gives the ability to create application-layer tunnels
-    over an SCTP connection.
-    A client would bind to a port on the selected protocol and wait for
-    connections. Incoming data would be sent over the SCTP connection to
-    the server at either stream-level or connection-level. The server would
-    then forward the data over the same protocol to some destination.
-    Thus, traffic between the client and the server utilize advanced
-    SCTP functions while being transparent to the sender and
-    reciever except source and destination information in the IP and
-    application layer headers.
+    This is preferably done beneath the IP layer but can also be partly
+    done in the TCP/UDP layer.
+**** OpenVPN
+     OpenVPN offers an ideal solution by tunneling on a low level
+     (TUN/TAP interfaces). In it's current version, OpenVPN only supports
+     TCP and UDP, but this could be extended to include SCTP. By routing
+     forwarded traffic on the device over the OpenVPN interface, one
+     would achieve truly transparent tunneling.
+**** Application layer
+     The simpler implementation is to create tunnels like:
+     TCP -> SCTP -> TCP
+     A client would bind to a port on the selected protocol and wait for
+     connections. Incoming data would be sent over the SCTP connection to
+     the server at either stream-level or connection-level. The server would
+     then forward the data over the same protocol to some destination.
+     Thus, traffic between the client and the server utilize advanced
+     SCTP functions while being transparent to the sender and
+     reciever except source and destination information in the IP and
+     application layer headers.
