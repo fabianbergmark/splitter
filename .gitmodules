@@ -1,3 +1,6 @@
 [submodule "src/linux-sctp"]
 	path = src/linux-sctp
 	url = git://github.com/fabianbergmark/linux-sctp.git
+[submodule "src/openvpn"]
+	path = src/openvpn
+	url = https://github.com/fabianbergmark/openvpn.git
