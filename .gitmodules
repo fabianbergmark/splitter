@@ -1,0 +1,3 @@
+[submodule "src/openvpn"]
+	path = src/openvpn
+	url = https://github.com/fabianbergmark/openvpn.git
