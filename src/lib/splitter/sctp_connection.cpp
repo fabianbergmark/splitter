@@ -108,17 +108,17 @@ void SCTP::Connection::handle_notification_assoc_change(sctp_assoc_change &assoc
               << " outbound streams: (" << assoc.sac_outbound_streams << ")";
     break;
   case SCTP_COMM_LOST:
-    std::cerr << "[SCTP_COMM_LOST]"
+    std::cerr << " [SCTP_COMM_LOST]"
               << " error: (" <<  strerror(assoc.sac_error) << ")";
     break;
   case SCTP_RESTART:
-    std::cerr << "[SCTP_RESTART]";
+    std::cerr << " [SCTP_RESTART]";
     break;
   case SCTP_SHUTDOWN_COMP:
-    std::cerr << "[SCTP_SHUTDOWN_COMP]";
+    std::cerr << " [SCTP_SHUTDOWN_COMP]";
     break;
   case SCTP_CANT_STR_ASSOC:
-    std::cerr << "[SCTP_CANT_STR_ASSOC]"
+    std::cerr << " [SCTP_CANT_STR_ASSOC]"
               << " error: (" << strerror(assoc.sac_error) << ")";
     break;
   default:
@@ -132,19 +132,19 @@ void SCTP::Connection::handle_notification_paddr_change(sctp_paddr_change &paddr
             << ip_address((sockaddr*)&saddr);
   switch (paddr.spc_state) {
   case SCTP_ADDR_AVAILABLE:
-    std::cerr << "[SCTP_ADDR_AVAILABLE]";
+    std::cerr << " [SCTP_ADDR_AVAILABLE]";
     break;
   case SCTP_ADDR_UNREACHABLE:
-    std::cerr << "[SCTP_ADDR_AVAILABLE]";
+    std::cerr << " [SCTP_ADDR_AVAILABLE]";
     break;
   case SCTP_ADDR_REMOVED:
-    std::cerr << "[SCTP_ADDR_REMOVED]";
+    std::cerr << " [SCTP_ADDR_REMOVED]";
     break;
   case SCTP_ADDR_ADDED:
-    std::cerr << "[SCTP_ADDR_ADDED]";
+    std::cerr << " [SCTP_ADDR_ADDED]";
     break;
   case SCTP_ADDR_MADE_PRIM:
-    std::cerr << "[SCTP_ADDR_MADE_PRIM]";
+    std::cerr << " [SCTP_ADDR_MADE_PRIM]";
     break;
   }
   std::cerr << " address: (" << ip_address((sockaddr*)&paddr.spc_aaddr) << ")"
@@ -162,10 +162,10 @@ void SCTP::Connection::handle_notification_send_failed(sctp_send_failed &fail, s
             << ip_address((sockaddr*)&saddr);
   switch (fail.ssf_flags) {
   case SCTP_DATA_UNSENT:
-    std::cerr << "[SCTP_DATA_UNSENT]";
+    std::cerr << " [SCTP_DATA_UNSENT]";
     break;
   case SCTP_DATA_SENT:
-    std::cerr << "[SCTP_DATA_SENT]";
+    std::cerr << " [SCTP_DATA_SENT]";
   }
   std::cerr << " error: (" << fail.ssf_error << ")"
             << std::endl;
@@ -182,7 +182,7 @@ void SCTP::Connection::handle_notification_partial_delivery(sctp_pdapi_event &pd
             << ip_address((sockaddr*)&saddr);
   switch (pdapi.pdapi_indication) {
   case SCTP_PARTIAL_DELIVERY_ABORTED:
-    std::cerr << "[SCTP_PARTIAL_DELIVIERY_ABORTED]";
+    std::cerr << " [SCTP_PARTIAL_DELIVIERY_ABORTED]";
     break;
   }
   std::cerr << std::endl;
