@@ -4,3 +4,6 @@
 [submodule "src/openvpn"]
 	path = src/openvpn
 	url = https://github.com/fabianbergmark/openvpn.git
+[submodule "bin/openvpn/conf/easy-rsa"]
+	path = bin/openvpn/conf/easy-rsa
+	url = https://github.com/OpenVPN/easy-rsa.git
