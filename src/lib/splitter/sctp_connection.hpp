@@ -1,8 +1,10 @@
 #ifndef DEFINE_SCTP_CONNECTION_HPP
 #define DEFINE_SCTP_CONNECTION_HPP
 
-#include <memory>
+#include <arpa/inet.h>
+#include <netinet/sctp.h>
 
+#include <memory>
 #include "connection.hpp"
 
 namespace SCTP {
